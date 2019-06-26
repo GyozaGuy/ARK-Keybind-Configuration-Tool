@@ -1,7 +1,7 @@
 const {app, BrowserWindow, protocol, shell} = require('electron');
 const windowStateKeeper = require('electron-window-state');
 const fs = require('fs');
-const pathJoin = require('path').join;
+const joinPath = require('path').join;
 require('electron-reload')(__dirname);
 
 protocol.registerStandardSchemes(['es6']);
@@ -29,7 +29,7 @@ function createWindow() {
 
   mainWindowState.manage(win);
 
-  win.loadFile('index.html');
+  win.loadFile(joinPath('src', 'index.html'));
 
   win.once('ready-to-show', () => {
     win.show();
@@ -78,7 +78,7 @@ app.on('ready', () => {
   // Add es6:// protocol for loading ES6 modules
   protocol.registerBufferProtocol('es6', (req, cb) => {
     fs.readFile(
-      pathJoin(__dirname, req.url.replace('es6://', '')),
+      joinPath(__dirname, req.url.replace('es6://', '')),
       (_e, b) => {cb({mimeType: 'text/javascript', data: b})}
     );
   });
