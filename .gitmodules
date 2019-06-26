@@ -1,0 +1,3 @@
+[submodule "src/include"]
+	path = src/include
+	url = git@github.com:GyozaGuy/common-include.git

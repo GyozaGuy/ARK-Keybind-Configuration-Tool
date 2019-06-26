@@ -1,0 +1,36 @@
+{
+  "name": "ark-keybind-configuration-tool",
+  "version": "0.0.3",
+  "description": "A keybind configuration tool for ARK: Survival Evolved",
+  "main": "main.js",
+  "productName": "ARK Keybind Configuration Tool",
+  "scripts": {
+    "build": "npm run build-clean && npm run build-linux && npm run build-win32",
+    "build-clean": "rimraf dist",
+    "build-linux": "rimraf dist/*linux* && electron-packager . --platform=linux --arch=x64 --icon=img/appicon --out=dist",
+    "build-win32": "rimraf dist/*win32* && electron-packager . --platform=win32 --arch=x64 --icon=img/appicon --out=dist",
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@gitlab.com/GyozaGuy/ARK-Keybind-Configuration-Tool.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://gitlab.com/GyozaGuy/ARK-Keybind-Configuration-Tool/issues"
+  },
+  "homepage": "https://gitlab.com/GyozaGuy/ARK-Keybind-Configuration-Tool#README",
+  "dependencies": {
+    "electron": "^2.0.18",
+    "electron-reload": "^1.4.0",
+    "electron-window-state": "^5.0.3"
+  },
+  "devDependencies": {
+    "electron-packager": "^12.2.0",
+    "eslint": "^6.0.1",
+    "rimraf": "^2.6.3"
+  }
+}
