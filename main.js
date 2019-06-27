@@ -1,4 +1,4 @@
-const {app, BrowserWindow, protocol, shell} = require('electron');
+const {app, BrowserWindow, ipcMain: ipc, protocol, shell} = require('electron');
 const windowStateKeeper = require('electron-window-state');
 const fs = require('fs');
 const joinPath = require('path').join;
@@ -17,11 +17,12 @@ function createWindow() {
   const {height, width} = mainWindowState;
 
   win = new BrowserWindow({
+    backgroudColor: '#0d1120',
     height,
     show: false,
-    title: 'Android Messages',
+    title: 'ARK Keybind Configuration Tool',
     webPreferences: {
-      nodeIntegration: false,
+      nodeIntegration: true,
       plugins: true
     },
     width
@@ -29,7 +30,7 @@ function createWindow() {
 
   mainWindowState.manage(win);
 
-  win.loadFile(joinPath('src', 'index.html'));
+  win.loadFile(`${__dirname}/src/index.html`);
 
   win.once('ready-to-show', () => {
     win.show();
@@ -79,7 +80,7 @@ app.on('ready', () => {
   protocol.registerBufferProtocol('es6', (req, cb) => {
     fs.readFile(
       joinPath(__dirname, req.url.replace('es6://', '')),
-      (_e, b) => {cb({mimeType: 'text/javascript', data: b})}
+      (_e, b) => cb({mimeType: 'text/javascript', data: b})
     );
   });
 
@@ -104,4 +105,34 @@ app.on('ready', () => {
 
 app.on('window-all-closed', () => {
   app.quit();
+});
+
+ipc.on('load-config', event => {
+  // Try to find the directory containing "Input.ini"
+  const defaultLocations = {
+    linux: '',
+    win32: 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\ARK\\ShooterGame\\Saved\\Config\\WindowsNoEditor\\Input.ini'
+  };
+
+  const data = fs.readFileSync(defaultLocations[process.platform], 'utf8');
+  const actionMappingSectionStart = data.match(/(\[\/Script\/Engine\.InputSettings\])/gi)[0];
+  const actionMappings = data.match(/(^ActionMappings.*$)/gmi);
+
+  if (actionMappingSectionStart && actionMappings) {
+    const actionMappingRegex = /ActionName="(\w+)",Key=(.*),bShift=(\w+),bCtrl=(\w+),bAlt=(\w+),bCmd=(\w+)/i;
+    // Parse actionMappings and send to renderer
+    event.returnValue = actionMappings.map(am => {
+      const [, action, key, shift, ctrl, alt, cmd] = am.match(actionMappingRegex);
+      return {
+        action,
+        key,
+        shift: shift === 'True',
+        ctrl: ctrl === 'True',
+        alt: alt === 'True',
+        cmd: cmd === 'True'
+      };
+    });
+  } else {
+    event.returnValue = new Error('No config found');
+  }
 });
