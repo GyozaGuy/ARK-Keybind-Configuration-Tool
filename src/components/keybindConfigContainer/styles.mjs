@@ -2,13 +2,16 @@ import {html} from '../../include/mjs/templateUtils.mjs';
 
 export default html`
   <style>
-    .spinner {
+    .spinner, #noConfig {
       left: 50%;
       position: absolute;
       top: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
     }
-    #content {
+    #noConfig {
+      color: white;
+    }
+    #content:not([hidden]) {
       display: grid;
       grid-template-rows: auto 1fr;
       height: 100vh;

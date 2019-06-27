@@ -15,6 +15,10 @@ body {
   overflow: hidden;
 }
 
+[alert] {
+  color: var(--ark-red);
+}
+
 [card] {
   background-color: #eee;
   border-radius: 4px;

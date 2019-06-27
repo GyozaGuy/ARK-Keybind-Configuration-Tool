@@ -8,12 +8,19 @@ customElements.define('keybind-config-container', class extends HTMLElement {
   async connectedCallback() {
     document.head.appendChild(dom(styles));
     this.appendChild(dom(html`
-      <div container>
-        <section @name="_spinner" class="spinner">
+      <div @name="_container" container>
+        <section class="spinner" @name="_spinner">
           <div spinner></div>
         </section>
 
-        <section @name="_content" id="content" hidden>
+        <section id="noConfig" @name="_noConfig">
+          <h1>No config found! Please select your config below:</h1>
+          <div @name="_fileInputWrapper">
+            <input type="file" #change="${this._handleSelectFile.bind(this)}">
+          </div>
+        </section>
+
+        <section id="content" @name="_content" hidden>
           <header>
             <div>
               <strong>ARK Keybind Configuration Tool</strong>
@@ -26,18 +33,22 @@ customElements.define('keybind-config-container', class extends HTMLElement {
             </div>
           </header>
 
-          <div @name="_configs" id="configs"></div>
+          <div id="configs" @name="_configs"></div>
         </section>
       </div>
     `, this));
 
-    // Try to load Input.ini
-    const inputConfigs = ipc.sendSync('load-config');
+    this.readConfig();
+  }
+
+  readConfig(fileName = '') {
+    const inputConfigs = ipc.sendSync('load-config', fileName);
 
     if (Array.isArray(inputConfigs)) {
-      this._spinner.hidden = true;
-      this._content.hidden = false;
       this.renderConfigs(inputConfigs);
+      this.showSection(this._content);
+    } else {
+      this.showSection(this._noConfig);
     }
   }
 
@@ -60,5 +71,21 @@ customElements.define('keybind-config-container', class extends HTMLElement {
         </div>
       `, this));
     });
+  }
+
+  showSection(section) {
+    [...this._container.children].forEach(child => {
+      child.hidden = child !== section;
+    });
+  }
+
+  _handleSelectFile({target: {value}}) {
+    const fileName = value.replace(/^.*[\\/]/i, '');
+
+    if (fileName === 'input.ini') {
+      this.readConfig(value);
+    } else {
+      this._fileInputWrapper.setAttribute('alert', '');
+    }
   }
 });

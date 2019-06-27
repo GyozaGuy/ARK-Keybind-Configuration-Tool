@@ -107,32 +107,36 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
-ipc.on('load-config', event => {
+ipc.on('load-config', (event, configPath) => {
   // Try to find the directory containing "Input.ini"
   const defaultLocations = {
     linux: '',
     win32: 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\ARK\\ShooterGame\\Saved\\Config\\WindowsNoEditor\\Input.ini'
   };
 
-  const data = fs.readFileSync(defaultLocations[process.platform], 'utf8');
-  const actionMappingSectionStart = data.match(/(\[\/Script\/Engine\.InputSettings\])/gi)[0];
-  const actionMappings = data.match(/(^ActionMappings.*$)/gmi);
+  try {
+    const data = fs.readFileSync(configPath || defaultLocations[process.platform], 'utf8');
+    const actionMappingSectionStart = data.match(/(\[\/Script\/Engine\.InputSettings\])/gi)[0];
+    const actionMappings = data.match(/(^ActionMappings.*$)/gmi);
 
-  if (actionMappingSectionStart && actionMappings) {
-    const actionMappingRegex = /ActionName="(\w+)",Key=(.*),bShift=(\w+),bCtrl=(\w+),bAlt=(\w+),bCmd=(\w+)/i;
-    // Parse actionMappings and send to renderer
-    event.returnValue = actionMappings.map(am => {
-      const [, action, key, shift, ctrl, alt, cmd] = am.match(actionMappingRegex);
-      return {
-        action,
-        key,
-        shift: shift === 'True',
-        ctrl: ctrl === 'True',
-        alt: alt === 'True',
-        cmd: cmd === 'True'
-      };
-    });
-  } else {
+    if (actionMappingSectionStart && actionMappings) {
+      const actionMappingRegex = /ActionName="(\w+)",Key=(.*),bShift=(\w+),bCtrl=(\w+),bAlt=(\w+),bCmd=(\w+)/i;
+      // Parse actionMappings and send to renderer
+      event.returnValue = actionMappings.map(am => {
+        const [, action, key, shift, ctrl, alt, cmd] = am.match(actionMappingRegex);
+        return {
+          action,
+          key,
+          shift: shift === 'True',
+          ctrl: ctrl === 'True',
+          alt: alt === 'True',
+          cmd: cmd === 'True'
+        };
+      });
+    } else {
+      event.returnValue = new Error('No config found');
+    }
+  } catch (err) {
     event.returnValue = new Error('No config found');
   }
 });
