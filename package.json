@@ -26,8 +26,7 @@
   "dependencies": {
     "electron": "^2.0.18",
     "electron-reload": "^1.4.0",
-    "electron-window-state": "^5.0.3",
-    "passport-steam": "^1.0.10"
+    "electron-window-state": "^5.0.3"
   },
   "devDependencies": {
     "electron-packager": "^12.2.0",
