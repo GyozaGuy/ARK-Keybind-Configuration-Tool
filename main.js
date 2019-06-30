@@ -1,12 +1,11 @@
 const {app, BrowserWindow, ipcMain: ipc, protocol, shell} = require('electron');
 const windowStateKeeper = require('electron-window-state');
 const fs = require('fs');
-const joinPath = require('path').join;
+const {dirname, join: joinPath} = require('path');
 require('electron-reload')(__dirname);
 
 protocol.registerStandardSchemes(['es6']);
 
-let isQuitting = false;
 let win;
 
 function createWindow() {
@@ -36,15 +35,6 @@ function createWindow() {
     win.show();
   });
 
-  win.on('close', e => {
-    if (!isQuitting) {
-      e.preventDefault();
-      win.hide();
-    } else {
-      win = null;
-    }
-  });
-
   // win.openDevTools();
 }
 
@@ -69,10 +59,6 @@ app.on('activate', () => {
   } else {
     win.show();
   }
-});
-
-app.on('before-quit', () => {
-  isQuitting = true;
 });
 
 app.on('ready', () => {
@@ -103,8 +89,8 @@ app.on('ready', () => {
   });
 });
 
-app.on('window-all-closed', () => {
-  app.quit();
+ipc.on('backup-config', (_event, filename) => {
+  backupConfig(filename);
 });
 
 ipc.on('load-config', (event, configPath) => {
@@ -115,24 +101,35 @@ ipc.on('load-config', (event, configPath) => {
   };
 
   try {
-    const data = fs.readFileSync(configPath || defaultLocations[process.platform], 'utf8');
-    const actionMappingSectionStart = data.match(/(\[\/Script\/Engine\.InputSettings\])/gi)[0];
+    const iniFile = configPath || defaultLocations[process.platform];
+    const data = fs.readFileSync(iniFile, {encoding: 'utf8'});
+    const actionMappingSectionStart = data.match(/(\[\/Script\/Engine\.InputSettings\])/i)[0];
     const actionMappings = data.match(/(^ActionMappings.*$)/gmi);
 
     if (actionMappingSectionStart && actionMappings) {
+      // Backup file if a backup doesn't already exist
+      const backupFilename = joinPath(dirname(iniFile), 'Input.ini.bak');
+
+      if (!fs.existsSync(backupFilename)) {
+        backupConfig(iniFile);
+      }
+
       const actionMappingRegex = /ActionName="(\w+)",Key=(.*),bShift=(\w+),bCtrl=(\w+),bAlt=(\w+),bCmd=(\w+)/i;
       // Parse actionMappings and send to renderer
-      event.returnValue = actionMappings.map(am => {
-        const [, action, key, shift, ctrl, alt, cmd] = am.match(actionMappingRegex);
-        return {
-          action,
-          key,
-          shift: shift === 'True',
-          ctrl: ctrl === 'True',
-          alt: alt === 'True',
-          cmd: cmd === 'True'
-        };
-      });
+      event.returnValue = {
+        actionMappings: actionMappings.map(am => {
+          const [, action, key, shift, ctrl, alt, cmd] = am.match(actionMappingRegex);
+          return {
+            action,
+            key,
+            shift: shift === 'True',
+            ctrl: ctrl === 'True',
+            alt: alt === 'True',
+            cmd: cmd === 'True'
+          };
+        }),
+        filename: iniFile
+      };
     } else {
       event.returnValue = new Error('No config found');
     }
@@ -140,3 +137,41 @@ ipc.on('load-config', (event, configPath) => {
     event.returnValue = new Error('No config found');
   }
 });
+
+ipc.on('save-config', (event, {config, filename}) => {
+  try {
+    // Generate file contents
+    const configString = config.reduce((acc, cur) => {
+      const newEntry = `\nActionMappings=(ActionName="${cur.action}",Key=${cur.key},bShift=${cur.shift ? 'True' : 'False'},bCtrl=${cur.ctrl ? 'True' : 'False'},bAlt=${cur.alt ? 'True' : 'False'},bCmd=${cur.cmd ? 'True' : 'False'})`;
+      return `${acc}${newEntry}`;
+    }, '');
+
+    // Get current file contents
+    const currentConfig = fs.readFileSync(filename, {encoding: 'utf8'});
+
+    // Replace file contents
+    const newConfigLines = [];
+    let foundConfigStart = false;
+
+    currentConfig.split('\n').forEach(line => {
+      if (!foundConfigStart) {
+        newConfigLines.push(line);
+      }
+
+      if (/\[\/Script\/Engine\.InputSettings\]/i.test(line)) {
+        foundConfigStart = true;
+      }
+    });
+
+    const newConfig = `${newConfigLines.join('\n')}${configString}`;
+
+    fs.writeFileSync(filename, newConfig, {encoding: 'utf8'});
+    event.returnValue = 'success';
+  } catch (err) {
+    event.returnValue = 'error';
+  }
+});
+
+function backupConfig(filename) {
+  fs.copyFileSync(filename, joinPath(dirname(filename), `Input.ini.${Date.now()}bak`));
+}

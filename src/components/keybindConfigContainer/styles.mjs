@@ -35,13 +35,31 @@ export default html`
       position: absolute;
       top: 100%;
       width: 100%;
+      z-index: 1;
+    }
+    header > span {
+      font-size: 1.5em;
+      font-weight: bold;
     }
     header * + * {
       margin-left: 10px;
     }
+    #status {
+      font-weight: bold;
+    }
     #configs {
       overflow: auto;
       padding: 5px;
+    }
+    [config]:not([hidden]) {
+      align-items: center;
+      display: grid;
+      grid-gap: 10px;
+      grid-template-columns: 1fr 1fr repeat(4, auto);
+      padding: 10px;
+    }
+    [config] + [config] {
+      border-top: 1px solid #aaa;
     }
   </style>
 `;
